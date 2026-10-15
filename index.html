@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>기숙사메이트 - 실시간 완벽 연동</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <style>
+    :root {
+      --brand: #710d0f;
+      --brand-dark: #201f2d;
+      --brand-soft: #f5ebec;
+      --ink: #201f2d;
+      --muted: #77747d;
+      --line: #e5dfe0;
+      --surface: #ffffff;
+      --canvas: #f7f5f5;
+    }
+
+    html { min-height: 100%; background: var(--canvas); }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      align-items: stretch;
+      background-color: var(--canvas);
+      background-image: radial-gradient(rgb(32 31 45 / 12%) 0.7px, transparent 0.7px);
+      background-size: 18px 18px;
+      color: var(--ink);
+      font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 1440px !important;
+      min-height: 100vh;
+      margin: 0 auto;
+      overflow: visible;
+      background: var(--canvas);
+      box-shadow: 0 0 50px rgb(25 49 59 / 7%);
+    }
+
+    .app-shell.bg-white { background: var(--canvas) !important; }
+
+    .app-shell > header {
+      position: sticky;
+      top: 12px;
+      z-index: 40;
+      width: min(calc(100% - 48px), 1740px);
+      min-height: 68px;
+      margin: 12px auto 0;
+      padding: 10px 18px;
+      color: var(--ink);
+      background: transparent !important;
+      border: 1px solid rgb(255 255 255 / 64%);
+      border-radius: 14px;
+      box-shadow: 0 12px 32px rgb(32 31 45 / 12%);
+      isolation: isolate;
+    }
+
+    .app-shell > header::before {
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      border-radius: inherit;
+      background: rgb(255 255 255 / 78%);
+      backdrop-filter: blur(18px) saturate(135%);
+      content: "";
+      pointer-events: none;
+    }
+
+    .app-shell > header.bg-indigo-600 { background: transparent !important; }
+
+    .app-shell > header h1 { color: var(--ink); }
+    .brand-home-button {
+      display: flex;
+      min-height: 42px !important;
+      align-items: center;
+      gap: 10px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+    .brand-home-button:hover h1 { color: var(--brand); }
+    .app-shell > header .fa-hotel {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      color: white;
+      border-radius: 12px;
+      background: var(--brand);
+      font-size: 17px;
+    }
+
+    .app-shell main {
+      width: 100%;
+      padding: 28px 22px 104px;
+    }
+
+    .app-shell .bg-indigo-600,
+    .app-shell .bg-blue-600,
+    .app-shell .bg-orange-500 { background-color: var(--brand) !important; }
+    .app-shell .hover\:bg-indigo-700:hover,
+    .app-shell .hover\:bg-blue-700:hover,
+    .app-shell .hover\:bg-orange-600:hover { background-color: var(--brand-dark) !important; }
+    .app-shell .text-indigo-600,
+    .app-shell .text-indigo-700,
+    .app-shell .text-blue-600 { color: var(--brand) !important; }
+    .app-shell .border-indigo-600 { border-color: var(--brand) !important; }
+    .app-shell .bg-indigo-50,
+    .app-shell .bg-indigo-100,
+    .app-shell .bg-blue-50,
+    .app-shell .bg-blue-100 { background-color: var(--brand-soft) !important; }
+    .app-shell .border-indigo-100,
+    .app-shell .border-blue-200 { border-color: #ead6d7 !important; }
+    .app-shell .shadow-indigo-200 { --tw-shadow-color: rgb(113 13 15 / 18%) !important; }
+
+    #tabRoom > div:first-child {
+      background: linear-gradient(120deg, #201f2d 0%, #201f2d 58%, #710d0f 100%) !important;
+      box-shadow: 0 12px 26px rgb(32 31 45 / 18%);
+    }
+
+    #tabRoom > .bg-white {
+      border-color: #dcd8df;
+      box-shadow: 0 10px 24px rgb(32 31 45 / 7%);
+    }
+
+    #tabRoom > .bg-white h4 { color: #201f2d; }
+    #tabRoom #memberCountBadge {
+      color: #fff !important;
+      background: #201f2d !important;
+    }
+
+    #tabLaundry > .bg-blue-50 {
+      color: #201f2d !important;
+      background: #f5ebec !important;
+      border-color: #ead6d7 !important;
+    }
+
+    #tabLaundry > .bg-white {
+      border-color: #dedbe2;
+      border-top: 3px solid #201f2d;
+      box-shadow: 0 12px 26px rgb(32 31 45 / 8%);
+    }
+
+    #tabLaundry > .bg-white h4 { color: #201f2d; }
+    #tabLaundry > .bg-white .bg-blue-100,
+    #tabLaundry > .bg-white .bg-orange-100 {
+      color: #710d0f !important;
+      background: #f5ebec !important;
+    }
+
+    #tabLaundry > .bg-white .bg-gray-50 {
+      color: #fff;
+      background: #201f2d;
+    }
+
+    #tabLaundry > .bg-white .bg-gray-50 span { color: #fff !important; }
+    #tabLaundry input[type="range"] { accent-color: #710d0f !important; }
+
+    .app-shell button {
+      min-height: 40px;
+      transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, transform 160ms ease;
+    }
+
+    .app-shell button:active { transform: translateY(1px); }
+    .app-shell input:not([type="range"]),
+    .app-shell select {
+      min-height: 42px;
+      border-color: var(--line);
+      border-radius: 10px;
+      color: var(--ink);
+    }
+    .app-shell input:focus,
+    .app-shell select:focus {
+      outline: 2px solid rgb(113 13 15 / 20%);
+      border-color: var(--brand);
+    }
+
+    .app-shell .rounded-2xl,
+    .app-shell .rounded-xl { border-radius: 14px; }
+    .app-shell .bg-white.border,
+    .app-shell .bg-white.border-gray-100 {
+      border-color: var(--line);
+      box-shadow: 0 8px 22px rgb(25 49 59 / 4%);
+    }
+
+    #bottomNav:not(.hidden) {
+      position: fixed;
+      z-index: 30;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      max-width: 100%;
+      padding: 8px 4px max(8px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line);
+      background: rgb(255 255 255 / 97%);
+      box-shadow: 0 -8px 24px rgb(25 49 59 / 6%);
+      backdrop-filter: blur(12px);
+    }
+
+    #bottomNav button { min-height: 48px; gap: 2px; }
+
+    @media (max-width: 640px) {
+      .app-shell > header { top: 10px; width: calc(100% - 20px); min-height: 58px; margin-top: 10px; padding: 8px 12px; }
+      .app-shell > header { gap: 8px; }
+      .app-shell > header .brand-home-button { flex: 0 0 auto; gap: 8px; white-space: nowrap; }
+      .app-shell > header .brand-home-button h1 { flex: 0 0 auto; font-size: 16px; line-height: 1.2; white-space: nowrap; }
+      .app-shell > header .fa-hotel { width: 34px; height: 34px; flex: 0 0 auto; }
+      .app-shell > header > div:last-child { flex: 0 0 auto; flex-wrap: nowrap; gap: 4px; white-space: nowrap; }
+      #syncStatus, #headerRoomCode, #logoutBtn, #googleLogoutBtn { flex-shrink: 0; white-space: nowrap; }
+      #headerRoomCode { display: none !important; }
+      .app-shell main { padding: 20px 14px 104px; }
+      #loginScreen { padding-top: 8px; }
+      #loginScreen > div:first-child { margin-bottom: 4px; }
+      #bottomNav button { font-size: 10px; }
+    }
+
+    @media (min-width: 900px) {
+      .app-shell > header { top: 12px; }
+      .app-shell main { min-height: calc(100vh - 88px); padding: 34px 44px 56px; }
+      #bottomNav:not(.hidden) {
+        position: static;
+        inset: auto;
+        width: auto;
+        max-width: none;
+        flex: 0 1 auto;
+        flex-direction: row;
+        justify-content: center;
+        gap: 2px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+      }
+      #bottomNav button {
+        flex: 0 1 auto;
+        min-height: 42px;
+        justify-content: center;
+        flex-direction: row;
+        gap: 7px;
+        padding: 0 9px;
+        border-radius: 9px;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      #bottomNav button i { width: auto; margin: 0 !important; font-size: 14px; }
+      #bottomNav button.text-indigo-600 { background: var(--brand-soft); }
+      .app-shell main .text-xs { font-size: 13px !important; line-height: 1.4 !important; }
+      .app-shell main [class~="text-[10px]"] { font-size: 11px !important; }
+      .app-shell main .text-sm { font-size: 15px !important; }
+      .app-shell main button { min-height: 44px; }
+      .app-shell main input:not([type="range"]),
+      .app-shell main select { min-height: 46px; }
+      .app-shell main .p-4 { padding: 18px !important; }
+      #loginScreen,
+      #waitingScreen { width: min(100%, 620px); margin: 24px auto; }
+      body.app-entry #loginScreen { width: min(100%, 760px); margin: 0 auto; padding: 38px 40px; }
+      body.app-entry #loginScreen h2 { font-size: 23px; }
+      #tabRoom:not(.hidden) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 20px; }
+      #tabRoom > :first-child { grid-column: 1 / -1; }
+      #tabLaundry:not(.hidden) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 20px; }
+      #tabLaundry > :first-child { grid-column: 1 / -1; }
+      #tabSnack, #tabRules, #tabPenalties, #tabNotifications { max-width: 1040px; }
+    }
+
+    @media (min-width: 900px) and (max-width: 1199px) {
+      #bottomNav button { padding: 0 10px; }
+      #bottomNav button span { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+
+    body.home-active {
+      min-height: 100svh;
+      overflow: hidden;
+      background: #201f2d;
+    }
+
+    body.home-active .app-shell {
+      width: 100%;
+      max-width: none !important;
+      min-height: 100svh;
+      background: #201f2d;
+      box-shadow: none;
+    }
+
+    body.home-active .app-shell > header { display: none; }
+    body.home-active #mainContent { min-height: 100svh; padding: 0; overflow: hidden; }
+
+    body.app-ready { background: #201f2d; }
+    body.app-ready::before {
+      position: fixed;
+      z-index: 0;
+      inset: -14px;
+      background-image: url("https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=2400&q=88");
+      background-position: center;
+      background-size: cover;
+      content: "";
+      filter: blur(12px) brightness(.52);
+      pointer-events: none;
+    }
+
+    body.app-ready .app-shell {
+      position: relative;
+      z-index: 1;
+      max-width: none !important;
+      background: transparent !important;
+      box-shadow: none;
+    }
+
+    body.app-ready #mainContent {
+      min-height: calc(100vh - 72px);
+      padding: 34px 44px 56px;
+      background: transparent;
+    }
+
+    body.app-entry #mainContent {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    body.app-entry #loginScreen { width: min(100%, 760px); }
+
+    body.app-ready #tabSnack,
+    body.app-ready #tabRules,
+    body.app-ready #tabPenalties,
+    body.app-ready #tabNotifications {
+      padding: 22px;
+      border: 1px solid rgb(255 255 255 / 72%);
+      border-radius: 14px;
+      background: rgb(255 255 255 / 96%);
+      box-shadow: 0 18px 44px rgb(32 31 45 / 12%);
+      backdrop-filter: blur(8px);
+    }
+
+    body.app-ready #tabSnack h3,
+    body.app-ready #tabRules h3,
+    body.app-ready #tabPenalties h3,
+    body.app-ready #tabNotifications h3 { color: #201f2d; }
+
+    body.app-ready #tabSnack .text-gray-400,
+    body.app-ready #tabRules .text-gray-400,
+    body.app-ready #tabPenalties .text-gray-400,
+    body.app-ready #tabNotifications .text-gray-400 { color: #625f69; }
+
+    body.app-ready #loginScreen::before { display: none; }
+    body.app-ready #loginScreen::after {
+      background: linear-gradient(135deg, rgb(32 31 45 / 14%), rgb(113 13 15 / 8%));
+    }
+
+    .home-screen {
+      position: relative;
+      display: flex;
+      min-height: 100svh;
+      overflow: hidden;
+      isolation: isolate;
+      color: #fff;
+      background: #201f2d;
+    }
+
+    .home-screen::before,
+    .home-screen::after {
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      content: "";
+      pointer-events: none;
+    }
+
+    .home-screen::before {
+      z-index: -2;
+      background-image: url("https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=2400&q=88");
+      background-position: center 48%;
+      background-size: cover;
+      filter: blur(12px) brightness(.58);
+      animation: campus-drift 24s ease-in-out infinite alternate;
+    }
+
+    .home-screen::after {
+      background:
+        linear-gradient(90deg, rgb(32 31 45 / 93%) 0%, rgb(32 31 45 / 78%) 48%, rgb(32 31 45 / 54%) 100%),
+        linear-gradient(0deg, rgb(113 13 15 / 35%), transparent 48%);
+    }
+
+    .home-layout {
+      position: relative;
+      display: flex;
+      width: min(100%, 1540px);
+      min-height: 100svh;
+      flex-direction: column;
+      justify-content: space-between;
+      margin: 0 auto;
+      padding: 30px 64px 24px;
+    }
+
+    .home-nav,
+    .home-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .home-nav {
+      width: min(100%, 1180px);
+      min-height: 70px;
+      align-self: center;
+      padding: 9px 16px;
+      border: 1px solid rgb(255 255 255 / 24%);
+      border-radius: 12px;
+      background: rgb(32 31 45 / 38%);
+      box-shadow: 0 14px 36px rgb(0 0 0 / 16%);
+      backdrop-filter: blur(16px) saturate(125%);
+      animation: home-rise 750ms both;
+    }
+
+    .home-mark {
+      display: grid;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      border: 1px solid rgb(255 255 255 / 50%);
+      border-radius: 50%;
+      background: #710d0f;
+      color: #fff;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 18px;
+      font-weight: 700;
+      animation: mark-turn 900ms cubic-bezier(.2,.8,.2,1) both;
+    }
+
+    .home-wordmark,
+    .home-index,
+    .home-footer {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+    }
+
+    .home-wordmark { margin-left: 14px; }
+    .home-index { color: rgb(255 255 255 / 72%); }
+    .home-index strong { color: #fff; }
+
+    .home-nav-brand { display: flex; align-items: center; }
+
+    .home-main {
+      position: relative;
+      width: min(100%, 1180px);
+      margin: auto;
+      padding: 72px 0 78px;
+    }
+
+    .home-kicker {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 22px;
+      color: rgb(255 255 255 / 78%);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      animation: home-rise 800ms 100ms both;
+    }
+
+    .home-kicker::before {
+      width: 36px;
+      height: 2px;
+      background: #a72b30;
+      content: "";
+      transform-origin: left;
+      animation: line-grow 850ms 300ms both;
+    }
+
+    .home-title {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 84px;
+      font-weight: 600;
+      line-height: .99;
+      letter-spacing: 0;
+    }
+
+    .home-title > span {
+      display: block;
+      width: fit-content;
+      animation: home-rise 900ms both;
+    }
+
+    .home-title > span:first-child { animation-delay: 180ms; }
+    .home-title > span:nth-child(2) { animation-delay: 340ms; }
+
+    .home-title .home-c3 {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 7px 12px 6px;
+      border-left: 3px solid #a72b30;
+      color: rgb(255 255 255 / 82%);
+      font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      animation: home-rise 800ms 500ms both;
+    }
+
+    .home-description {
+      margin: 24px 0 30px;
+      color: rgb(255 255 255 / 76%);
+      font-size: 16px;
+      line-height: 1.8;
+      animation: home-rise 850ms 480ms both;
+    }
+
+    .home-enter {
+      position: relative;
+      display: inline-flex;
+      min-width: 224px;
+      min-height: 58px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 28px;
+      overflow: hidden;
+      padding: 0 20px;
+      border: 1px solid rgb(255 255 255 / 28%);
+      border-radius: 5px;
+      background: #710d0f;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      animation: home-rise 850ms 620ms both;
+      transition: background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .home-enter::after {
+      position: absolute;
+      top: -40%;
+      bottom: -40%;
+      left: -45%;
+      width: 30%;
+      background: linear-gradient(90deg, transparent, rgb(255 255 255 / 25%), transparent);
+      content: "";
+      transform: skewX(-18deg);
+      animation: button-sheen 4.5s 1.2s ease-in-out infinite;
+    }
+
+    .home-enter:hover {
+      background: #201f2d;
+      box-shadow: 0 12px 32px rgb(0 0 0 / 22%);
+      transform: translateY(-3px);
+    }
+
+    .home-enter i { transition: transform 180ms ease; }
+    .home-enter:hover i { transform: translateX(4px); }
+
+    .home-side-note {
+      position: absolute;
+      top: 50%;
+      right: 0;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: rgb(255 255 255 / 65%);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      writing-mode: vertical-rl;
+      animation: home-rise 900ms 700ms both;
+    }
+
+    .home-side-note::before {
+      width: 1px;
+      height: 74px;
+      background: #a72b30;
+      content: "";
+      animation: line-grow-vertical 1.1s 800ms both;
+      transform-origin: top;
+    }
+
+    .home-footer {
+      position: relative;
+      min-height: 42px;
+      border-top: 1px solid rgb(255 255 255 / 25%);
+      color: rgb(255 255 255 / 65%);
+      animation: home-rise 900ms 700ms both;
+    }
+
+    .home-footer p { margin: 0; }
+    .home-footer span { display: inline-flex; align-items: center; gap: 10px; }
+    .home-footer i { color: #bd5658; animation: arrow-nudge 1.5s ease-in-out infinite; }
+    .home-footer-actions { display: flex; align-items: center; gap: 14px; }
+    .home-credit-button {
+      min-height: 30px !important;
+      padding: 0 10px;
+      border: 1px solid rgb(255 255 255 / 38%);
+      border-radius: 5px;
+      background: rgb(32 31 45 / 42%);
+      color: #fff;
+      cursor: pointer;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      transition: background-color 160ms ease, border-color 160ms ease;
+    }
+    .home-credit-button:hover { border-color: rgb(255 255 255 / 72%); background: #710d0f; }
+    .home-credit-detail {
+      position: absolute;
+      right: 0;
+      bottom: calc(100% + 12px);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+      border: 1px solid rgb(255 255 255 / 72%);
+      border-radius: 10px;
+      background: rgb(255 255 255 / 94%);
+      box-shadow: 0 12px 32px rgb(0 0 0 / 20%);
+      backdrop-filter: blur(14px);
+      color: #201f2d;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .home-credit-detail[hidden] { display: none; }
+    .home-credit-detail strong { color: #710d0f; font-size: 14px; }
+
+    .home-leaving { animation: home-exit 420ms ease-in forwards; }
+    .app-ready #loginScreen { animation: app-arrive 520ms ease-out both; }
+
+    #loginScreen {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      padding: 30px;
+      border: 1px solid rgb(255 255 255 / 44%);
+      border-radius: 20px;
+      background: rgb(32 31 45 / 38%);
+      box-shadow: 0 24px 70px rgb(32 31 45 / 20%);
+      backdrop-filter: blur(16px);
+    }
+
+    #loginScreen::before,
+    #loginScreen::after {
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      content: "";
+      pointer-events: none;
+    }
+
+    #loginScreen::before {
+      z-index: -2;
+      background-image: url("https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1800&q=85");
+      background-position: center;
+      background-size: cover;
+      filter: blur(9px) brightness(.72);
+      transform: scale(1.08);
+      animation: login-background-drift 22s ease-in-out infinite alternate;
+    }
+
+    #loginScreen::after {
+      background: linear-gradient(135deg, rgb(32 31 45 / 48%), rgb(113 13 15 / 26%));
+    }
+
+    #loginScreen > * { position: relative; z-index: 1; }
+    #loginScreen > div:first-child h2 { color: #fff; }
+    #loginScreen > div:first-child p { color: rgb(255 255 255 / 78%); }
+    #loginScreen > div:first-child > div {
+      color: #fff !important;
+      background: #710d0f !important;
+      box-shadow: 0 8px 24px rgb(32 31 45 / 25%);
+    }
+    #loginScreen > .bg-gray-50 {
+      border-color: rgb(255 255 255 / 62%);
+      background: rgb(255 255 255 / 94%) !important;
+      box-shadow: 0 10px 28px rgb(32 31 45 / 12%);
+    }
+
+    @keyframes campus-drift {
+      from { transform: scale(1.02) translate3d(-.5%, 0, 0); }
+      to { transform: scale(1.09) translate3d(.5%, -1%, 0); }
+    }
+
+    @keyframes home-rise {
+      from { opacity: 0; transform: translateY(22px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes line-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    @keyframes line-grow-vertical { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+    @keyframes mark-turn { from { opacity: 0; transform: rotate(-65deg) scale(.65); } to { opacity: 1; transform: rotate(0) scale(1); } }
+    @keyframes button-sheen {
+      0%, 22% { left: -45%; }
+      55%, 100% { left: 130%; }
+    }
+    @keyframes arrow-nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+    @keyframes home-exit { to { opacity: 0; transform: scale(1.025); } }
+    @keyframes app-arrive { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes login-background-drift { from { transform: scale(1.08) translateX(-.6%); } to { transform: scale(1.14) translateX(.6%); } }
+
+    @media (max-width: 640px) {
+      body.app-ready #mainContent {
+        min-height: calc(100svh - 62px);
+        padding: 20px 14px 104px;
+      }
+      body.app-entry #loginScreen { padding: 22px 18px; }
+      #loginScreen { padding: 20px 16px; }
+      .home-layout { padding: 18px 22px 18px; }
+      .home-nav { min-height: 58px; padding: 7px 10px; }
+      .home-mark { width: 40px; height: 40px; font-size: 16px; }
+      .home-wordmark { max-width: 190px; font-size: 9px; letter-spacing: 1px; line-height: 1.5; }
+      .home-index { font-size: 9px; letter-spacing: 1px; }
+      .home-main { padding: 62px 0 70px; }
+      .home-kicker { margin-bottom: 20px; font-size: 10px; letter-spacing: 1.5px; }
+      .home-title { font-size: 46px; line-height: 1.04; }
+      .home-title > span:nth-child(2) { max-width: 100%; }
+      .home-title .home-c3 { margin-top: 16px; font-size: 14px; }
+      .home-description { max-width: 300px; margin: 22px 0 26px; font-size: 14px; }
+      .home-enter { width: 100%; min-height: 56px; }
+      .home-side-note { display: none; }
+      .home-footer { gap: 14px; font-size: 8px; letter-spacing: 1px; }
+      .home-footer p { max-width: 170px; line-height: 1.6; }
+      .home-footer span { gap: 6px; }
+      .home-footer-actions { gap: 9px; }
+      .home-credit-button { min-height: 28px !important; padding: 0 8px; font-size: 8px; }
+    }
+
+    @media (max-width: 380px) {
+      .app-shell > header { padding: 8px 10px; }
+      .app-shell > header .brand-home-button { gap: 6px; }
+      .app-shell > header .brand-home-button h1 { font-size: 14px; }
+      .app-shell > header .fa-hotel { width: 30px; height: 30px; }
+      .app-shell > header > div:last-child { gap: 4px; }
+      #syncStatus { max-width: 64px; overflow: hidden; padding: 2px 4px !important; font-size: 8px !important; text-overflow: ellipsis; }
+      #logoutBtn { padding-right: 6px; padding-left: 6px; font-size: 10px !important; }
+      .home-layout { padding-right: 17px; padding-left: 17px; }
+      .home-title { font-size: 41px; }
+      .home-wordmark { max-width: 155px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .home-screen::before,
+      .home-nav,
+      .home-mark,
+      .home-kicker,
+      .home-title > span,
+      .home-title .home-c3,
+      .home-description,
+      .home-enter,
+      .home-enter::after,
+      .home-side-note,
+      .home-side-note::before,
+      .home-footer,
+      .home-footer i,
+      .home-leaving,
+      .app-ready #loginScreen,
+      .tab-panel-enter {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+
+    .tab-panel-enter { animation: tab-panel-arrive 360ms cubic-bezier(.2,.7,.2,1) both; }
+
+    @keyframes tab-panel-arrive {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+  
+  <!-- MQTT 웹소켓 라이브러리 (실시간 차단 없는 고성능 통신망) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+</head>
+<body class="home-active bg-gray-100 min-h-screen text-gray-800 flex justify-center items-center">
+
+  <div class="app-shell w-full max-w-md bg-white min-h-screen shadow-2xl flex flex-col justify-between relative overflow-hidden">
+    
+    <!-- HEADER -->
+    <header class="bg-indigo-600 text-white p-4 flex justify-between items-center shadow-md sticky top-0 z-20">
+      <button type="button" class="brand-home-button" onclick="returnToHome()" aria-label="기숙사메이트 홈페이지로 이동">
+        <i class="fa-solid fa-hotel text-xl"></i>
+        <h1 class="text-xl font-bold tracking-tight">기숙사메이트</h1>
+      </button>
+      <nav id="bottomNav" class="hidden bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 max-w-md mx-auto z-30 px-1 py-2 flex justify-around text-center text-[10px] text-gray-500" aria-label="기숙사 메뉴">
+        <button onclick="switchTab('tabRoom')" id="navTabRoom" title="방 관리" class="flex-1 py-1 text-indigo-600 font-bold flex flex-col items-center">
+          <i class="fa-solid fa-house text-sm mb-0.5"></i><span>방 관리</span>
+        </button>
+        <button onclick="switchTab('tabLaundry')" id="navTabLaundry" title="세탁/건조" class="flex-1 py-1 hover:text-indigo-600 flex flex-col items-center">
+          <i class="fa-solid fa-soap text-sm mb-0.5"></i><span>세탁/건조</span>
+        </button>
+        <button onclick="switchTab('tabSnack')" id="navTabSnack" title="간식 팟" class="flex-1 py-1 hover:text-indigo-600 flex flex-col items-center">
+          <i class="fa-solid fa-utensils text-sm mb-0.5"></i><span>간식 팟</span>
+        </button>
+        <button onclick="switchTab('tabRules')" id="navTabRules" title="룰" class="flex-1 py-1 hover:text-indigo-600 flex flex-col items-center">
+          <i class="fa-solid fa-scroll text-sm mb-0.5"></i><span>룰</span>
+        </button>
+        <button onclick="switchTab('tabPenalties')" id="navTabPenalties" title="벌칙" class="flex-1 py-1 hover:text-indigo-600 flex flex-col items-center">
+          <i class="fa-solid fa-gavel text-sm mb-0.5"></i><span>벌칙</span>
+        </button>
+        <button onclick="switchTab('tabNotifications')" id="navTabNotifications" title="알림" class="flex-1 py-1 hover:text-indigo-600 flex flex-col items-center">
+          <i class="fa-solid fa-bell text-sm mb-0.5"></i><span>알림</span>
+        </button>
+      </nav>
+      <div class="flex items-center gap-2">
+        <span id="syncStatus" class="text-[10px] bg-yellow-500 text-white px-2 py-0.5 rounded-full font-bold">
+          🟡 서버 연결 중...
+        </span>
+        <span id="headerRoomCode" class="text-xs bg-indigo-700 px-2.5 py-1 rounded-full font-semibold hidden">
+          방: <span id="displayRoomCode">--</span>
+        </span>
+        <button id="logoutBtn" onclick="logout()" class="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded-lg font-bold hidden transition">
+          나가기
+        </button>
+        <button id="googleLogoutBtn" type="button" onclick="logoutGoogleAccount()" aria-label="Google 계정 로그아웃" title="Google 계정 로그아웃" class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 overflow-y-auto p-4 pb-24" id="mainContent">
+
+      <!-- C3 HOMEPAGE -->
+      <section id="homeScreen" class="home-screen">
+        <div class="home-layout">
+          <nav class="home-nav" aria-label="C3 홈">
+            <div class="home-nav-brand">
+              <span class="home-mark" aria-hidden="true">C3</span>
+              <span class="home-wordmark">VALOR CHRISTIAN<br>COMMUNITY BOARDING</span>
+            </div>
+            <span class="home-index">VCCB <strong>· C3</strong></span>
+          </nav>
+
+          <div class="home-main">
+            <p class="home-kicker">A PLACE TO LIVE, LEARN AND GROW</p>
+            <h1 class="home-title">
+              <span>Valor Christian</span>
+              <span>Community Boarding</span>
+              <span class="home-c3">(C3)</span>
+            </h1>
+            <p class="home-description">함께 생활하고, 함께 배우며, 함께 성장하는 기숙사 공동체</p>
+            <button type="button" class="home-enter" onclick="beginApp()">
+              <span>메이트 시작하기</span>
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </button>
+            <div class="home-side-note" aria-hidden="true">COMMUNITY · RESIDENTIAL LIFE</div>
+          </div>
+
+          <footer class="home-footer">
+            <p>VALOR CHRISTIAN COMMUNITY BOARDING</p>
+            <div class="home-footer-actions">
+              <span>C3 <i class="fa-solid fa-arrow-down" aria-hidden="true"></i></span>
+              <button id="homeCreditButton" type="button" class="home-credit-button" onclick="toggleCredits()" aria-expanded="false" aria-controls="homeCreditDetails">CREDIT</button>
+              <div id="homeCreditDetails" class="home-credit-detail" hidden aria-live="polite">
+                <span>Developed by: </span><strong>Hyunwoo, Hajun, Ajun</strong>
+              </div>
+            </div>
+          </footer>
+        </div>
+      </section>
+
+      <!-- 1. LOGIN / ROOM CREATION & JOIN -->
+      <section id="loginScreen" class="hidden space-y-5 my-auto pt-4">
+        <div class="text-center space-y-1">
+          <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold shadow-inner">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <h2 class="text-xl font-bold text-gray-800">기숙사메이트 시작하기</h2>
+          <p class="text-xs text-gray-500">방장 승인 후 실시간 연동됩니다</p>
+        </div>
+
+        <div class="space-y-2">
+          <button id="googleSignInBtn" type="button" onclick="signInWithGoogle()" class="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50">
+            <i class="fa-brands fa-google text-red-500" aria-hidden="true"></i>
+            Google 계정으로 로그인
+          </button>
+          <p id="googleAuthStatus" class="text-center text-xs text-gray-500" aria-live="polite">Google 계정 로그인 후 방에 입장할 수 있습니다.</p>
+          <button id="googleSwitchAccountBtn" type="button" onclick="signInWithGoogle('googleSwitchAccountBtn')" class="hidden mx-auto text-xs font-bold text-indigo-600 hover:underline">
+            다른 Google 계정으로 로그인
+          </button>
+          <p id="googleAuthSetupNotice" class="hidden rounded-lg bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
+            Google 로그인을 사용하려면 Firebase 웹 앱 설정을 코드의 <code>firebaseConfig</code>에 입력하고 Firebase Console에서 Google 로그인을 활성화하세요.
+          </p>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-4 text-xs">
+          <!-- 모드 선택 -->
+          <div>
+            <label class="block font-bold text-gray-700 mb-1.5">입장 유형 선택</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" onclick="selectUserMode('creator')" id="modeCreatorBtn" class="py-2.5 rounded-xl font-bold border-2 border-indigo-600 bg-indigo-50 text-indigo-600 transition">
+                👑 방장 (새 방 만들기)
+              </button>
+              <button type="button" onclick="selectUserMode('joiner')" id="modeJoinerBtn" class="py-2.5 rounded-xl font-bold border-2 border-gray-200 text-gray-600 transition">
+                🙋‍♂️ 참여자 (방 코드 입력)
+              </button>
+            </div>
+          </div>
+
+          <!-- 신분 및 학년 -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-gray-600 mb-1">신분</label>
+              <select id="roleSelect" class="w-full p-2.5 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="학생">👨‍🎓 학생</option>
+                <option value="선생님">👨‍🏫 사관 / 선생님</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-gray-600 mb-1">학년</label>
+              <input type="number" id="gradeInput" placeholder="1" value="1" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500">
+            </div>
+          </div>
+
+          <!-- 이름 입력 -->
+          <div>
+            <label class="block font-bold text-gray-600 mb-1">내 이름</label>
+            <input type="text" id="userNameInput" placeholder="이름을 입력하세요" class="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500">
+          </div>
+
+          <!-- 방장용 방 코드 생성 -->
+          <div id="creatorRoomSection" class="space-y-1">
+            <label class="block font-bold text-gray-600">발급된 방 코드</label>
+            <div class="flex gap-2">
+              <input type="text" id="generatedRoomCodeInput" readonly class="flex-1 p-2.5 border border-gray-300 rounded-xl bg-gray-100 font-mono font-bold text-indigo-600">
+              <button type="button" onclick="generateNewRoomCode()" class="px-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300">
+                새 코드
+              </button>
+            </div>
+            <p class="text-[10px] text-indigo-600">* 참여자에게 알려준 후 방 입장을 누르세요.</p>
+          </div>
+
+          <!-- 참여자용 방 코드 입력 -->
+          <div id="joinerRoomSection" class="space-y-1 hidden">
+            <label class="block font-bold text-gray-600">방장의 방 코드 입력</label>
+            <input type="text" id="joinRoomCodeInput" placeholder="예: ROOM1234" class="w-full p-2.5 border border-gray-300 rounded-xl font-mono uppercase focus:ring-2 focus:ring-indigo-500">
+            <p class="text-[10px] text-red-500">* 영문/숫자를 대소문자 정확히 입력하세요.</p>
+          </div>
+        </div>
+
+        <button onclick="requestEntry()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-2xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 text-sm">
+          방 입장 / 승인 요청하기 🚀
+        </button>
+      </section>
+
+      <!-- 2. WAITING FOR HOST APPROVAL SCREEN -->
+      <section id="waitingScreen" class="hidden text-center space-y-5 my-auto py-12">
+        <div class="w-20 h-20 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto text-3xl animate-bounce">
+          <i class="fa-solid fa-hourglass-half"></i>
+        </div>
+        <div class="space-y-2">
+          <h3 class="text-xl font-bold text-gray-800">방장의 수락을 기다리는 중...</h3>
+          <p class="text-xs text-gray-500">방장이 승인하면 자동으로 메인 화면으로 이동합니다.</p>
+          <div class="inline-block bg-indigo-50 text-indigo-700 font-mono font-bold text-sm px-4 py-1.5 rounded-full mt-2">
+            요청 방 코드: <span id="waitingRoomCode">ROOM0000</span>
+          </div>
+        </div>
+        <button onclick="cancelWaiting()" class="bg-gray-200 text-gray-700 font-bold px-5 py-2 rounded-xl text-xs hover:bg-gray-300">
+          요청 취소
+        </button>
+      </section>
+
+      <!-- 3. TAB 1: MAIN ROOM MANAGEMENT -->
+      <section id="tabRoom" class="hidden space-y-4">
+        <!-- USER PROFILE CARD -->
+        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 rounded-2xl shadow-md space-y-3">
+          <div class="flex justify-between items-center">
+            <div>
+              <span id="userRoleBadge" class="bg-white/20 px-2 py-0.5 rounded text-[10px] font-semibold">학생</span>
+              <h3 id="profileNameDisplay" class="text-lg font-bold mt-0.5">사용자</h3>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] text-white/80">현재 방 코드</span>
+              <p id="roomCodeDisplayCard" class="font-mono font-bold text-base">---</p>
+            </div>
+          </div>
+          
+          <div class="pt-2 border-t border-white/20">
+            <label class="block text-xs text-indigo-100 font-medium mb-1">💬 상태 메시지 변경</label>
+            <div class="flex gap-2">
+              <input type="text" id="myStatusInput" placeholder="예: 취침 중 💤, 취업 준비 📖" class="flex-1 px-3 py-1.5 rounded-lg text-gray-800 text-xs focus:outline-none">
+              <button onclick="updateMyStatus()" class="bg-white text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold shadow hover:bg-indigo-50">
+                변경
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- HOST ONLY: JOIN REQUEST APPROVAL LIST -->
+        <div id="hostRequestsContainer" class="hidden bg-amber-50 border border-amber-200 p-4 rounded-2xl shadow-sm space-y-3">
+          <h4 class="font-bold text-amber-800 text-xs flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-user-plus text-amber-600"></i> 🔔 새로운 입장 승인 요청</span>
+            <span id="requestCountBadge" class="bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full text-[10px] font-bold">0명</span>
+          </h4>
+          <div id="pendingRequestsList" class="space-y-2">
+            <p class="text-xs text-amber-600 text-center py-1">대기 중인 요청이 없습니다.</p>
+          </div>
+        </div>
+
+        <!-- REALTIME MEMBERS LIST -->
+        <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-3">
+          <h4 class="font-bold text-gray-800 text-xs flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-users text-indigo-500"></i> 실시간 접속 멤버</span>
+            <span id="memberCountBadge" class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px]">0명</span>
+          </h4>
+          <div id="roomMembersList" class="space-y-2">
+            <p class="text-xs text-gray-400 text-center py-2">멤버를 불러오는 중...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. TAB 2: LAUNDRY & DRYER -->
+      <section id="tabLaundry" class="hidden space-y-4">
+        <div class="bg-blue-50 border border-blue-200 p-3 rounded-2xl text-xs text-blue-800 flex items-start space-x-2">
+          <i class="fa-solid fa-circle-info text-blue-500 mt-0.5 text-sm"></i>
+          <p>한 명이 가전을 작동하면 방 안의 모든 사람 화면에 실시간 남은시간과 가동 사용자가 표시됩니다.</p>
+        </div>
+
+        <!-- WASHER -->
+        <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-3">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-lg">
+                <i class="fa-solid fa-soap"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-gray-800 text-sm">세탁기</h4>
+                <p id="washerUserText" class="text-xs text-gray-500">대기 중 / 사용 가능</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span id="washerBadge" class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">비어있음</span>
+              <p id="washerTimerDisplay" class="text-xs font-mono font-bold text-blue-600 mt-1 hidden">00:00</p>
+            </div>
+          </div>
+
+          <div class="space-y-1 bg-gray-50 p-2.5 rounded-xl">
+            <div class="flex justify-between text-xs font-bold text-gray-600">
+              <span>시간 설정</span>
+              <span id="washerTimeVal" class="text-blue-600 font-extrabold">40분</span>
+            </div>
+            <input type="range" id="washerSlider" min="10" max="90" step="5" value="40" oninput="document.getElementById('washerTimeVal').innerText=this.value+'분'" class="w-full accent-blue-600">
+          </div>
+
+          <button id="washerBtn" onclick="toggleAppliance('washer')" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition text-xs">
+            세탁 시작하기 🧼
+          </button>
+        </div>
+
+        <!-- DRYER -->
+        <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-3">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center text-lg">
+                <i class="fa-solid fa-wind"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-gray-800 text-sm">건조기</h4>
+                <p id="dryerUserText" class="text-xs text-gray-500">대기 중 / 사용 가능</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span id="dryerBadge" class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">비어있음</span>
+              <p id="dryerTimerDisplay" class="text-xs font-mono font-bold text-orange-600 mt-1 hidden">00:00</p>
+            </div>
+          </div>
+
+          <div class="space-y-1 bg-gray-50 p-2.5 rounded-xl">
+            <div class="flex justify-between text-xs font-bold text-gray-600">
+              <span>시간 설정</span>
+              <span id="dryerTimeVal" class="text-orange-600 font-extrabold">50분</span>
+            </div>
+            <input type="range" id="dryerSlider" min="10" max="90" step="5" value="50" oninput="document.getElementById('dryerTimeVal').innerText=this.value+'분'" class="w-full accent-orange-600">
+          </div>
+
+          <button id="dryerBtn" onclick="toggleAppliance('dryer')" class="w-full bg-orange-500 text-white font-bold py-2.5 rounded-xl hover:bg-orange-600 transition text-xs">
+            건조 시작하기 ♨️
+          </button>
+        </div>
+      </section>
+
+      <!-- 5. TAB 3: SNACK PARTY -->
+      <section id="tabSnack" class="hidden space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-gray-800 text-sm">🍕 간식 팟 모집</h3>
+          <button onclick="addSnackParty()" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow hover:bg-indigo-700">
+            + 모집글 등록
+          </button>
+        </div>
+        <div id="snackPartyList" class="space-y-2.5">
+          <p class="text-xs text-gray-400 text-center py-4">등록된 간식 팟이 없습니다.</p>
+        </div>
+      </section>
+
+      <!-- NEW TAB: RULES (기숙사 룰) -->
+      <section id="tabRules" class="hidden space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-scroll text-indigo-600"></i> 기숙사 규칙 (룰)
+          </h3>
+          <button id="addRuleBtn" onclick="addRule()" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow hover:bg-indigo-700 hidden">
+            + 룰 추가
+          </button>
+        </div>
+        <div id="hostRuleNotice" class="text-[10px] text-gray-400 bg-gray-50 p-2 rounded-lg">
+          🔒 규칙 추가/수정은 <b>방장만</b> 가능합니다.
+        </div>
+        <div id="rulesList" class="space-y-2">
+          <p class="text-xs text-gray-400 text-center py-4">등록된 규칙이 없습니다.</p>
+        </div>
+      </section>
+
+      <!-- NEW TAB: PENALTIES (벌칙 바) -->
+      <section id="tabPenalties" class="hidden space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-red-500"></i> 벌칙 목록
+          </h3>
+          <button id="addPenaltyBtn" onclick="addPenalty()" class="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow hover:bg-red-600 hidden">
+            + 벌칙 추가
+          </button>
+        </div>
+        <div id="hostPenaltyNotice" class="text-[10px] text-gray-400 bg-gray-50 p-2 rounded-lg">
+          🔒 벌칙 설정 및 수정은 <b>방장만</b> 가능합니다.
+        </div>
+        <div id="penaltiesList" class="space-y-2">
+          <p class="text-xs text-gray-400 text-center py-4">등록된 벌칙이 없습니다.</p>
+        </div>
+      </section>
+
+      <!-- 6. TAB 6: NOTIFICATIONS -->
+      <section id="tabNotifications" class="hidden space-y-3">
+        <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-bell text-indigo-600"></i> 실시간 방 알림
+        </h3>
+        <div id="notificationsList" class="space-y-2">
+          <p class="text-xs text-gray-400 text-center py-4">알림이 없습니다.</p>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- REALTIME SCRIPT LOGIC -->
+  <script>
+    let client = null;
+    let appStarted = false;
+    let currentUser = { name: '', role: '학생', grade: '1', roomCode: '', status: '접속 중 🟢' };
+    let currentMode = 'creator';
+    let isHost = false;
+    let timerInterval = null;
+    let pendingSessionRestore = null;
+    let sessionRestored = false;
+    let firebaseAuth = null;
+    let googleAuthConfigured = false;
+    const SESSION_STORAGE_KEY = 'c3RoomSession';
+    const firebaseConfig = {
+      apiKey: 'AIzaSyDlcX5loRhnK8Lu72J9lBdw8Dql6lER8HA',
+      authDomain: 'c3-room.firebaseapp.com',
+      projectId: 'c3-room',
+      appId: '1:220600041828:web:8798460df00c141dbc3a71'
+    };
+
+    // 데이터 저장소 (실시간 상태 관리)
+    let roomState = {
+      members: {},
+      requests: {},
+      appliances: { washer: null, dryer: null },
+      snacks: [],
+      rules: [
+        "밤 11시 이후 소음 자제",
+        "자신의 세탁물은 완료 직후 즉시 수거"
+      ],
+      penalties: [
+        "청소 안 할 시 방 청소 1회 독박",
+        "세탁물 1시간 이상 방치 시 음료수 쏘기"
+      ],
+      notifications: []
+    };
+
+    window.onload = function() {
+      generateNewRoomCode();
+      try {
+        pendingSessionRestore = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY));
+      } catch (error) {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+      if (!pendingSessionRestore || !pendingSessionRestore.user || !pendingSessionRestore.user.name || !pendingSessionRestore.user.roomCode) {
+        pendingSessionRestore = null;
+      }
+      initializeGoogleAuth();
+    };
+
+    function initializeGoogleAuth() {
+      googleAuthConfigured = firebaseConfig.apiKey !== 'YOUR_API_KEY' &&
+        firebaseConfig.projectId !== 'YOUR_PROJECT_ID' &&
+        firebaseConfig.appId !== 'YOUR_APP_ID';
+
+      if (!googleAuthConfigured) {
+        document.getElementById('googleSignInBtn').classList.add('hidden');
+        document.getElementById('googleAuthSetupNotice').classList.remove('hidden');
+        if (pendingSessionRestore) {
+          beginApp();
+          window.setTimeout(resumeSavedSession, 1200);
+        }
+        return;
+      }
+
+      try {
+        firebase.initializeApp(firebaseConfig);
+        firebaseAuth = firebase.auth();
+        firebaseAuth.onAuthStateChanged(user => {
+          document.getElementById('googleSignInBtn').classList.toggle('hidden', Boolean(user));
+          document.getElementById('googleSwitchAccountBtn').classList.toggle('hidden', !user);
+          document.getElementById('googleLogoutBtn').classList.toggle('hidden', !user);
+          document.getElementById('googleAuthStatus').innerText = user
+            ? `로그인됨: ${user.email || user.displayName}`
+            : 'Google 계정 로그인 후 방에 입장할 수 있습니다.';
+
+          if (pendingSessionRestore) {
+            if (user && pendingSessionRestore.user.googleUid === user.uid) {
+              beginApp();
+              window.setTimeout(resumeSavedSession, 1200);
+            } else {
+              localStorage.removeItem(SESSION_STORAGE_KEY);
+              pendingSessionRestore = null;
+            }
+          }
+        });
+      } catch (error) {
+        document.getElementById('googleSignInBtn').classList.add('hidden');
+        document.getElementById('googleAuthSetupNotice').classList.remove('hidden');
+      }
+    }
+
+    async function signInWithGoogle(buttonId = 'googleSignInBtn') {
+      if (!firebaseAuth) return;
+      const button = document.getElementById(buttonId);
+      button.disabled = true;
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        const result = await firebaseAuth.signInWithPopup(provider);
+        const user = result.user;
+        document.getElementById('userNameInput').value = user.displayName || user.email || '';
+        document.getElementById('googleAuthStatus').innerText = `로그인됨: ${user.email || user.displayName}`;
+      } catch (error) {
+        const errorMessages = {
+          'auth/popup-closed-by-user': '로그인 창이 닫혔습니다. 다시 시도해주세요.',
+          'auth/popup-blocked': '브라우저에서 팝업을 허용한 뒤 다시 시도해주세요.',
+          'auth/operation-not-supported-in-this-environment': '파일로 직접 연 페이지에서는 Google 로그인을 사용할 수 없습니다. localhost 또는 HTTPS 주소로 접속해주세요.',
+          'auth/unauthorized-domain': '현재 사이트 주소가 Firebase 승인 도메인에 없습니다. localhost 또는 배포 도메인을 등록해주세요.',
+          'auth/operation-not-allowed': 'Firebase Console에서 Google 로그인 제공자를 활성화해주세요.'
+        };
+        document.getElementById('googleAuthStatus').innerText = errorMessages[error.code] ||
+          `Google 로그인 실패 (${error.code || '알 수 없는 오류'}). Firebase 설정을 확인해주세요.`;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function logoutGoogleAccount() {
+      if (!firebaseAuth || !firebaseAuth.currentUser) return;
+      if (!confirm('Google 계정에서 로그아웃하시겠습니까?')) return;
+
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      try {
+        await firebaseAuth.signOut();
+        location.reload();
+      } catch (error) {
+        alert('Google 로그아웃에 실패했습니다. 다시 시도해주세요.');
+      }
+    }
+
+    function beginApp() {
+      if (appStarted) return;
+      appStarted = true;
+
+      const homeScreen = document.getElementById('homeScreen');
+      homeScreen.classList.add('home-leaving');
+      connectMqtt();
+      requestNotificationPermission();
+      startTimerLoop();
+
+      window.setTimeout(() => {
+        homeScreen.classList.add('hidden');
+        homeScreen.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('home-active');
+        document.body.classList.add('app-ready');
+        document.body.classList.add('app-entry');
+        document.getElementById('loginScreen').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 420);
+    }
+
+    // 모바일/브라우저 알림 권한 요청
+    function requestNotificationPermission() {
+      if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
+    }
+
+    // 스마트폰/푸시 알림 보내기
+    function sendPhoneNotification(title, body) {
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, {
+          body: body,
+          icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+        });
+      }
+    }
+
+    // 실시간 브로커 연결 (공용 포트)
+    function connectMqtt() {
+      const clientId = 'user_' + Math.random().toString(16).substr(2, 8);
+      client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: clientId });
+
+      client.on('connect', () => {
+        const syncStatus = document.getElementById('syncStatus');
+        syncStatus.innerText = '🟢 실시간 서버 연결 완료';
+        syncStatus.className = 'text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold';
+        if (pendingSessionRestore) {
+          resumeSavedSession();
+        } else if (sessionRestored) {
+          client.subscribe(`dorm_room/${currentUser.roomCode}`);
+          if (isHost) {
+            broadcastSync();
+          } else {
+            publishMsg('REQ_JOIN', {
+              applicant: { name: currentUser.name, role: currentUser.role, grade: currentUser.grade }
+            });
+          }
+        }
+      });
+
+      client.on('error', (err) => {
+        const syncStatus = document.getElementById('syncStatus');
+        syncStatus.innerText = '🔴 연결 오류';
+        syncStatus.className = 'text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold';
+      });
+
+      client.on('message', (topic, payload) => {
+        try {
+          const data = JSON.parse(payload.toString());
+          handleIncomingMessage(data);
+        } catch(e) {}
+      });
+    }
+
+    function selectUserMode(mode) {
+      currentMode = mode;
+      if (mode === 'creator') {
+        document.getElementById('modeCreatorBtn').className = 'py-2.5 rounded-xl font-bold border-2 border-indigo-600 bg-indigo-50 text-indigo-600 transition';
+        document.getElementById('modeJoinerBtn').className = 'py-2.5 rounded-xl font-bold border-2 border-gray-200 text-gray-600 transition';
+        document.getElementById('creatorRoomSection').classList.remove('hidden');
+        document.getElementById('joinerRoomSection').classList.add('hidden');
+      } else {
+        document.getElementById('modeCreatorBtn').className = 'py-2.5 rounded-xl font-bold border-2 border-gray-200 text-gray-600 transition';
+        document.getElementById('modeJoinerBtn').className = 'py-2.5 rounded-xl font-bold border-2 border-indigo-600 bg-indigo-50 text-indigo-600 transition';
+        document.getElementById('creatorRoomSection').classList.add('hidden');
+        document.getElementById('joinerRoomSection').classList.remove('hidden');
+      }
+    }
+
+    function generateNewRoomCode() {
+      const code = 'ROOM' + Math.floor(1000 + Math.random() * 9000);
+      document.getElementById('generatedRoomCodeInput').value = code;
+    }
+
+    function requestEntry() {
+      const googleUser = firebaseAuth && firebaseAuth.currentUser;
+      if (googleAuthConfigured && !googleUser) return alert('먼저 Google 계정으로 로그인해주세요.');
+
+      const name = document.getElementById('userNameInput').value.trim();
+      const role = document.getElementById('roleSelect').value;
+      const grade = document.getElementById('gradeInput').value;
+      
+      let roomCode = (currentMode === 'creator') 
+        ? document.getElementById('generatedRoomCodeInput').value
+        : document.getElementById('joinRoomCodeInput').value.trim().toUpperCase();
+
+      if (!name) return alert('이름을 입력해주세요!');
+      if (!roomCode) return alert('방 코드를 입력해주세요!');
+
+      currentUser.name = name;
+      currentUser.role = role;
+      currentUser.grade = grade;
+      currentUser.roomCode = roomCode;
+      currentUser.googleUid = googleUser ? googleUser.uid : '';
+      currentUser.email = googleUser ? googleUser.email : '';
+      saveSession();
+
+      // 방 토픽 구독
+      client.subscribe(`dorm_room/${roomCode}`);
+
+      if (currentMode === 'creator') {
+        isHost = true;
+        roomState.members[name] = { name, role, grade, status: currentUser.status };
+        enterMainRoom();
+      } else {
+        isHost = false;
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('waitingScreen').classList.remove('hidden');
+        document.getElementById('waitingRoomCode').innerText = roomCode;
+
+        // 방장에게 수락 요청 발송
+        publishMsg('REQ_JOIN', {
+          applicant: { name, role, grade }
+        });
+      }
+    }
+
+    function publishMsg(action, payload = {}) {
+      if (client && client.connected) {
+        client.publish(`dorm_room/${currentUser.roomCode}`, JSON.stringify({
+          action: action,
+          sender: currentUser.name,
+          payload: payload
+        }));
+      }
+    }
+
+    function handleIncomingMessage(msg) {
+      const { action, sender, payload } = msg;
+
+      // 1. 방장용: 참여자 수락 요청 수신
+      if (action === 'REQ_JOIN' && isHost) {
+        roomState.requests[payload.applicant.name] = payload.applicant;
+        updateRequestsUI();
+      }
+
+      // 2. 참여자용: 승인 및 거절 결과 수신
+      if (action === 'RESP_JOIN' && payload.target === currentUser.name) {
+        if (payload.approved) {
+          alert('🎉 방장이 입장을 승인했습니다!');
+          document.getElementById('waitingScreen').classList.add('hidden');
+          enterMainRoom();
+        } else {
+          alert('❌ 방장이 입장을 거절했습니다.');
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+          location.reload();
+        }
+      }
+
+      // 3. 상태 및 데이터동기화
+      if (action === 'SYNC_STATE') {
+        roomState = payload.state;
+        updateAllUI();
+      }
+
+      // 4. 새 신호에 따른 방장의 동기화 전파
+      if (isHost) {
+        if (action === 'MEMBER_ENTER') {
+          roomState.members[sender] = payload.member;
+          broadcastSync();
+        } else if (action === 'UPDATE_STATUS') {
+          if(roomState.members[sender]) roomState.members[sender].status = payload.status;
+          broadcastSync();
+        } else if (action === 'TOGGLE_APPLIANCE') {
+          roomState.appliances[payload.type] = payload.data;
+          addNotificationData(payload.notif);
+          broadcastSync();
+        } else if (action === 'ADD_SNACK') {
+          roomState.snacks.push(payload.snack);
+          addNotificationData(payload.notif);
+          broadcastSync();
+        }
+      }
+    }
+
+    function broadcastSync() {
+      if (isHost) {
+        saveSession();
+        publishMsg('SYNC_STATE', { state: roomState });
+        updateAllUI();
+      }
+    }
+
+    function saveSession() {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+        user: currentUser,
+        mode: currentMode,
+        roomState: isHost ? roomState : null
+      }));
+    }
+
+    function resumeSavedSession() {
+      if (!pendingSessionRestore) return;
+
+      const savedSession = pendingSessionRestore;
+      pendingSessionRestore = null;
+      sessionRestored = true;
+      currentUser = savedSession.user;
+      currentMode = savedSession.mode === 'joiner' ? 'joiner' : 'creator';
+      roomState = savedSession.roomState || roomState;
+      isHost = currentMode === 'creator';
+      if (client && client.connected) client.subscribe(`dorm_room/${currentUser.roomCode}`);
+
+      if (isHost) {
+        enterMainRoom();
+      } else {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('waitingScreen').classList.remove('hidden');
+        document.getElementById('waitingRoomCode').innerText = currentUser.roomCode;
+        publishMsg('REQ_JOIN', {
+          applicant: { name: currentUser.name, role: currentUser.role, grade: currentUser.grade }
+        });
+      }
+    }
+
+    function handleRequest(applicantName, isApproved) {
+      delete roomState.requests[applicantName];
+      if (isApproved) {
+        publishMsg('RESP_JOIN', { target: applicantName, approved: true });
+      } else {
+        publishMsg('RESP_JOIN', { target: applicantName, approved: false });
+      }
+      updateRequestsUI();
+    }
+
+    function enterMainRoom() {
+      document.body.classList.remove('app-entry');
+      document.getElementById('displayRoomCode').innerText = currentUser.roomCode;
+      document.getElementById('headerRoomCode').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.remove('hidden');
+      document.getElementById('roomCodeDisplayCard').innerText = currentUser.roomCode;
+      document.getElementById('profileNameDisplay').innerText = `${currentUser.name} (${currentUser.grade}학년)`;
+      document.getElementById('userRoleBadge').innerText = currentUser.role + (isHost ? ' (방장)' : '');
+
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('waitingScreen').classList.add('hidden');
+      document.getElementById('bottomNav').classList.remove('hidden');
+      document.getElementById('bottomNav').classList.add('flex');
+
+      if (isHost) {
+        document.getElementById('hostRequestsContainer').classList.remove('hidden');
+        document.getElementById('addRuleBtn').classList.remove('hidden');
+        document.getElementById('addPenaltyBtn').classList.remove('hidden');
+        broadcastSync();
+      } else {
+        publishMsg('MEMBER_ENTER', { member: { name: currentUser.name, role: currentUser.role, grade: currentUser.grade, status: currentUser.status } });
+      }
+
+      switchTab('tabRoom');
+    }
+
+    function updateRequestsUI() {
+      const container = document.getElementById('pendingRequestsList');
+      const countBadge = document.getElementById('requestCountBadge');
+      const reqs = Object.values(roomState.requests);
+
+      countBadge.innerText = `${reqs.length}명`;
+      if (reqs.length === 0) {
+        container.innerHTML = `<p class="text-xs text-amber-600 text-center py-1">대기 중인 요청이 없습니다.</p>`;
+        return;
+      }
+
+      container.innerHTML = reqs.map(r => `
+        <div class="flex justify-between items-center bg-white p-2.5 rounded-xl border border-amber-200">
+          <div>
+            <span class="font-bold text-xs text-gray-800">${r.name}</span>
+            <span class="text-[10px] text-gray-500">(${r.role} / ${r.grade}학년)</span>
+          </div>
+          <div class="flex gap-1">
+            <button onclick="handleRequest('${r.name}', true)" class="bg-indigo-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs hover:bg-indigo-700">
+              수락
+            </button>
+            <button onclick="handleRequest('${r.name}', false)" class="bg-red-500 text-white font-bold px-2.5 py-1 rounded-lg text-xs hover:bg-red-600">
+              거절
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateAllUI() {
+      // 1. 멤버 목록
+      const members = Object.values(roomState.members);
+      document.getElementById('memberCountBadge').innerText = `${members.length}명`;
+      document.getElementById('roomMembersList').innerHTML = members.map(m => `
+        <div class="flex justify-between items-center p-2.5 bg-gray-50 rounded-xl border border-gray-100">
+          <div>
+            <span class="font-bold text-xs text-gray-800">${m.name}</span>
+            <span class="text-[10px] text-gray-500">(${m.role} / ${m.grade}학년)</span>
+          </div>
+          <span class="text-xs bg-white border px-2.5 py-0.5 rounded-full text-indigo-600 font-bold">${m.status}</span>
+        </div>
+      `).join('');
+
+      // 2. 가전
+      updateApplianceUI('washer', roomState.appliances.washer);
+      updateApplianceUI('dryer', roomState.appliances.dryer);
+
+      // 3. 간식
+      const snackContainer = document.getElementById('snackPartyList');
+      if (roomState.snacks.length === 0) {
+        snackContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">등록된 간식 팟이 없습니다.</p>`;
+      } else {
+        snackContainer.innerHTML = roomState.snacks.map(s => `
+          <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center text-xs">
+            <div>
+              <span class="font-bold text-gray-800">${s.title}</span>
+              <span class="text-indigo-600 font-semibold ml-1">(${parseInt(s.price).toLocaleString()}원)</span>
+              <p class="text-[10px] text-gray-400">주최자: ${s.author}</p>
+            </div>
+            <button onclick="alert('${s.author}님에게 문의해주세요!')" class="bg-indigo-50 text-indigo-600 font-bold px-2.5 py-1 rounded-lg hover:bg-indigo-100">
+              참여하기
+            </button>
+          </div>
+        `).join('');
+      }
+
+      // 4. 룰 목록
+      const rulesContainer = document.getElementById('rulesList');
+      if (!roomState.rules || roomState.rules.length === 0) {
+        rulesContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">등록된 규칙이 없습니다.</p>`;
+      } else {
+        rulesContainer.innerHTML = roomState.rules.map((rule, idx) => `
+          <div class="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl text-xs flex justify-between items-center">
+            <span class="font-medium text-gray-700">📜 ${idx + 1}. ${rule}</span>
+            ${isHost ? `<button onclick="removeRule(${idx})" class="text-red-500 font-bold px-1 text-xs">삭제</button>` : ''}
+          </div>
+        `).join('');
+      }
+
+      // 5. 벌칙 목록
+      const penaltiesContainer = document.getElementById('penaltiesList');
+      if (!roomState.penalties || roomState.penalties.length === 0) {
+        penaltiesContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">등록된 벌칙이 없습니다.</p>`;
+      } else {
+        penaltiesContainer.innerHTML = roomState.penalties.map((pen, idx) => `
+          <div class="p-3 bg-red-50/50 border border-red-100 rounded-xl text-xs flex justify-between items-center">
+            <span class="font-medium text-red-800">⚠️ ${idx + 1}. ${pen}</span>
+            ${isHost ? `<button onclick="removePenalty(${idx})" class="text-red-500 font-bold px-1 text-xs">삭제</button>` : ''}
+          </div>
+        `).join('');
+      }
+
+      // 6. 알림
+      const notifContainer = document.getElementById('notificationsList');
+      if (roomState.notifications.length === 0) {
+        notifContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">알림이 없습니다.</p>`;
+      } else {
+        notifContainer.innerHTML = [...roomState.notifications].reverse().map(n => `
+          <div class="p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs flex justify-between items-center">
+            <span>${n.msg}</span>
+            <span class="text-[10px] text-gray-400">${n.time}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // 방장 전용: 룰 추가 및 삭제
+    function addRule() {
+      if (!isHost) return alert('방장만 설정할 수 있습니다!');
+      const newRule = prompt('새 기숙사 규칙(룰)을 입력하세요:');
+      if (newRule && newRule.trim()) {
+        roomState.rules.push(newRule.trim());
+        broadcastSync();
+      }
+    }
+
+    function removeRule(index) {
+      if (!isHost) return alert('방장만 삭제할 수 있습니다!');
+      if (confirm('이 규칙을 삭제하시겠습니까?')) {
+        roomState.rules.splice(index, 1);
+        broadcastSync();
+      }
+    }
+
+    // 방장 전용: 벌칙 추가 및 삭제
+    function addPenalty() {
+      if (!isHost) return alert('방장만 설정할 수 있습니다!');
+      const newPenalty = prompt('새 벌칙을 입력하세요:');
+      if (newPenalty && newPenalty.trim()) {
+        roomState.penalties.push(newPenalty.trim());
+        broadcastSync();
+      }
+    }
+
+    function removePenalty(index) {
+      if (!isHost) return alert('방장만 삭제할 수 있습니다!');
+      if (confirm('이 벌칙을 삭제하시겠습니까?')) {
+        roomState.penalties.splice(index, 1);
+        broadcastSync();
+      }
+    }
+
+    function updateMyStatus() {
+      const val = document.getElementById('myStatusInput').value.trim();
+      if (!val) return;
+      currentUser.status = val;
+      if (isHost) {
+        roomState.members[currentUser.name].status = val;
+        broadcastSync();
+      } else {
+        publishMsg('UPDATE_STATUS', { status: val });
+      }
+      document.getElementById('myStatusInput').value = '';
+    }
+
+    function toggleAppliance(type) {
+      const isWasher = type === 'washer';
+      const slider = document.getElementById(isWasher ? 'washerSlider' : 'dryerSlider');
+      const minutes = parseInt(slider.value);
+      const current = roomState.appliances[type];
+
+      let newData = null;
+      let msg = '';
+
+      if (current && current.running) {
+        newData = { running: false, user: '', endTime: 0, notified: false };
+        msg = `🛑 ${currentUser.name}님이 ${isWasher ? '세탁기' : '건조기'} 사용을 중지했습니다.`;
+      } else {
+        newData = { running: true, user: currentUser.name, endTime: Date.now() + minutes * 60000, notified: false };
+        msg = `🧼 ${currentUser.name}님이 ${isWasher ? '세탁기' : '건조기'}를 ${minutes}분간 가동합니다.`;
+      }
+
+      const now = new Date();
+      const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      if (isHost) {
+        roomState.appliances[type] = newData;
+        addNotificationData({ msg, time: timeStr });
+        broadcastSync();
+      } else {
+        publishMsg('TOGGLE_APPLIANCE', { type, data: newData, notif: { msg, time: timeStr } });
+      }
+    }
+
+    function updateApplianceUI(type, data) {
+      const isWasher = type === 'washer';
+      const userText = document.getElementById(isWasher ? 'washerUserText' : 'dryerUserText');
+      const badge = document.getElementById(isWasher ? 'washerBadge' : 'dryerBadge');
+      const btn = document.getElementById(isWasher ? 'washerBtn' : 'dryerBtn');
+      const timerDisplay = document.getElementById(isWasher ? 'washerTimerDisplay' : 'dryerTimerDisplay');
+
+      if (data && data.running) {
+        userText.innerText = `사용 중: ${data.user}님`;
+        badge.innerText = '사용 중';
+        badge.className = 'bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full';
+        btn.innerText = '작동 중지하기 ⏹️';
+        btn.className = 'w-full bg-gray-600 text-white font-bold py-2.5 rounded-xl text-xs';
+        timerDisplay.classList.remove('hidden');
+      } else {
+        userText.innerText = '대기 중 / 사용 가능';
+        badge.innerText = '비어있음';
+        badge.className = 'bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full';
+        btn.innerText = isWasher ? '세탁 시작하기 🧼' : '건조 시작하기 ♨️';
+        btn.className = isWasher ? 'w-full bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition text-xs' : 'w-full bg-orange-500 text-white font-bold py-2.5 rounded-xl hover:bg-orange-600 transition text-xs';
+        timerDisplay.classList.add('hidden');
+      }
+    }
+
+    // 타이머 및 폰 알림 루프
+    function startTimerLoop() {
+      setInterval(() => {
+        ['washer', 'dryer'].forEach(type => {
+          const app = roomState.appliances[type];
+          const isWasher = type === 'washer';
+          const timerDisplay = document.getElementById(isWasher ? 'washerTimerDisplay' : 'dryerTimerDisplay');
+
+          if (app && app.running) {
+            const remainMs = app.endTime - Date.now();
+            if (remainMs > 0) {
+              const totalSec = Math.floor(remainMs / 1000);
+              const mins = Math.floor(totalSec / 60);
+              const secs = totalSec % 60;
+              timerDisplay.innerText = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            } else {
+              timerDisplay.innerText = '00:00 (완료)';
+              
+              // 완료 알림 처리 (1회 발송)
+              if (!app.notified) {
+                app.notified = true;
+                const title = isWasher ? '🧼 세탁 완료 알림' : '♨️ 건조 완료 알림';
+                const body = `${app.user}님의 ${isWasher ? '세탁' : '건조'}이 모두 완료되었습니다! 지금 수거해주세요.`;
+                
+                sendPhoneNotification(title, body);
+
+                if (isHost) {
+                  const now = new Date();
+                  const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+                  addNotificationData({ msg: `🔔 [완료] ${app.user}님의 ${isWasher ? '세탁이' : '건조가'} 완료되었습니다.`, time: timeStr });
+                  broadcastSync();
+                }
+              }
+            }
+          }
+        });
+      }, 1000);
+    }
+
+    function addNotificationData(notif) {
+      roomState.notifications.push(notif);
+    }
+
+    function addSnackParty() {
+      const title = prompt('모집할 간식 메뉴를 입력하세요 (예: 치킨)');
+      if (!title) return;
+      const price = prompt('총 금액을 입력하세요 (예: 20000)');
+      if (!price) return;
+
+      const now = new Date();
+      const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const snack = { title, price, author: currentUser.name };
+      const notif = { msg: `🍕 ${currentUser.name}님이 '${title}' 간식 팟을 만드셨습니다.`, time: timeStr };
+
+      if (isHost) {
+        roomState.snacks.push(snack);
+        addNotificationData(notif);
+        broadcastSync();
+      } else {
+        publishMsg('ADD_SNACK', { snack, notif });
+      }
+    }
+
+    function logout() {
+      if (confirm('방에서 나가시겠습니까?')) {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        location.reload();
+      }
+    }
+
+    function cancelWaiting() {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      location.reload();
+    }
+
+    function returnToHome() {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      location.reload();
+    }
+
+    function toggleCredits() {
+      const button = document.getElementById('homeCreditButton');
+      const details = document.getElementById('homeCreditDetails');
+      const isExpanded = button.getAttribute('aria-expanded') === 'true';
+      button.setAttribute('aria-expanded', String(!isExpanded));
+      details.hidden = isExpanded;
+    }
+
+    function switchTab(tabId) {
+      ['tabRoom', 'tabLaundry', 'tabSnack', 'tabRules', 'tabPenalties', 'tabNotifications'].forEach(id => {
+        const section = document.getElementById(id);
+        if (section) {
+          section.classList.add('hidden');
+          section.classList.remove('tab-panel-enter');
+        }
+      });
+      const activeSection = document.getElementById(tabId);
+      activeSection.classList.remove('hidden');
+      void activeSection.offsetWidth;
+      activeSection.classList.add('tab-panel-enter');
+
+      // 탭 아이콘 강조
+      const navIds = ['navTabRoom', 'navTabLaundry', 'navTabSnack', 'navTabRules', 'navTabPenalties', 'navTabNotifications'];
+      navIds.forEach(navId => {
+        const navEl = document.getElementById(navId);
+        if (navEl) navEl.className = 'flex-1 py-1 hover:text-indigo-600 flex flex-col items-center text-gray-500';
+      });
+
+      const currentNavMap = {
+        'tabRoom': 'navTabRoom',
+        'tabLaundry': 'navTabLaundry',
+        'tabSnack': 'navTabSnack',
+        'tabRules': 'navTabRules',
+        'tabPenalties': 'navTabPenalties',
+        'tabNotifications': 'navTabNotifications'
+      };
+      const activeNav = document.getElementById(currentNavMap[tabId]);
+      if (activeNav) activeNav.className = 'flex-1 py-1 text-indigo-600 font-bold flex flex-col items-center';
+    }
+  </script>
+</body>
+</html>
